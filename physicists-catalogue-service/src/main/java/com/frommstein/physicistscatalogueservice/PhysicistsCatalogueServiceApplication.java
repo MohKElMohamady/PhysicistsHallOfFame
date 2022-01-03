@@ -175,6 +175,92 @@ import org.springframework.web.client.RestTemplate;
 	 * Final step is block(); which is telling spring to wait/ block execution until the object is completely created and hand it back
 	 * to our variable that will accept it.
 	 */
+
+	/* Part 14 calling the prize microservice
+	 *
+	 */
+
+	/* Part 15 Why should one avoid returning lists in APIs?
+	 * Once we want to enhance the API, we cannot return a list anymore, it must convert to an object.
+	 * Everytime we want to do an enhancement where the enhancement is not a part of the list, we have to change the contract
+	 * that we are providing.
+	 * All the clients that are expecting a list, their code will break.
+	 * However, if we had an object in the first place, where one property is a list, the client's code will not break.
+	 * That's why it is always better to have an object wrapper around the list.
+	 */
+
+	/* Part 16 What have we done so far
+	 *
+	 */
+
+	/* Part 17 Understanding Service Discovery
+	 * What are we doing wrong?
+	 * Why hard coded URLs are bad? ->
+	 * 1) Changes require code updates
+	 * 2) Dynamic URLs in the cloud
+	 * 3) Load balancing i.e let's say there is a microservice that under heavy demand and we will have mutliple instances
+	 * of this microservices each having his own url, then which one will we call?
+	 * 4) Multiple environments before deployment the url of the microservice changes so that we know it is in the quality
+	 * and assurance phase, we do not want to check everytime for the url
+	 *
+	 * Hence, we have this pattern called Service Discovery
+	 *
+	 * We have to provide a layer of abstract i.e something in between that in charge of what these services are.
+	 * We have the discovery server that is responsible for mapping the server name to the url.
+	 * When the client comes it will ask the discovery server and it will ask for the url.
+	 * But how does discovery server discover other microservices as well?
+	 *
+	 *
+	 * The slight disadvantage that it requires chatting between the client and the discovery server, there is
+	 * an additional step to discover it.
+	 *
+	 * We have an alternative which is: Server side discovery
+	 * and here is how it works:
+	 * The client asks to communicate with a service called x, the intermediate server will take this message and
+	 * delivery it directly to service x, hence the extra hop is deleted.
+	 *
+	 * Spring Cloud uses client side discovery.
+	 * The libraries that faciliate service discovery is on the client.
+	 *
+	 * Spring Cloud handles caching of discovering the server
+	 */
+
+
+	/* Part 18 Introducing Eureka
+	 * Eureka is one of these projects that are made open source thanks to netflix.
+	 * Netflix is one of the leaders in microservices libraries. Spring Boot community has created wrappers around
+	 * these technologies so that we have to talk Spring and Spring will talk directly with these technologies
+	 *
+	 * So what will we do?
+	 * First we will label the microservices that we have created as Eureka clients and the Discovery server will be
+	 * labeled as Eureka Server.
+	 * The API caller i.e the client will be labelled as a Eureka client as well because it wil talk with the discovery
+	 * server
+	 *
+	 * These will be steps:
+	 * 1) Start up the Eureka server
+	 * 2) IMPORTANT: Have microservices register/publish using Eureka client
+	 * 3) Final step: Have microservices locate(consume) using Eureka client
+	 */
+
+	/* Part 19 Starting a Eureka server
+	 * The way to start a Eureka server is by starting a Spring Boot application and add the Eureka Server dependency
+	 * The class that contains the main method must be annotated with @EnableEurekaServer
+	 *
+	 * Starting the Eureka server without any configuration will cause an error
+	 * To fix these errors, the following properties need to be added in the application.properties of the Eureka server
+	 * application
+	 * server.port=8761
+	 * eureka.client.register-with-eureka=false
+	 * eureka.client.fetch-registry=false
+	 * IMPORTANT
+	 * These two properties are added so that Eureka server DOES NOT REGISTER ITSELF,because every Eureka Server is a
+	 * Eureka client.
+	 * Once a Eureka Server starts it will try to register with other Eureka servers because we will have multiple
+	 * instances of them
+	 */
+
+
 @SpringBootApplication
 public class PhysicistsCatalogueServiceApplication {
 
