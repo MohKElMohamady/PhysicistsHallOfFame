@@ -1,4 +1,4 @@
-package com.frommstein.physicistsdataservice.models;
+package com.frommstein.physicistscatalogueservice.models;
 
 import java.util.List;
 
@@ -53,7 +53,6 @@ public class Physicist {
     public void setAlmaMater(String almaMater) {
         this.almaMater = almaMater;
     }
-
 
     public List<String> getListOfWonAwards() {
         return listOfWonAwards;

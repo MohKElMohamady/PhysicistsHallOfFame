@@ -2,22 +2,29 @@ package com.frommstein.physicistscatalogueservice.models;
 
 import java.util.List;
 
-public class CatalogueItem {
+public class PhysicistProfile {
 
     private String physicistName;
     private int yearOfBirth;
     private String almaMater;
-    private List<String> listOfAwards;
+    private List<Prize> listOfAwards;
 
 
-    public CatalogueItem(String physicistName, int yearOfBirth, String almaMater, List<String> listOfAwards) {
+    public PhysicistProfile(String physicistName, int yearOfBirth, String almaMater, List<Prize> listOfAwards) {
         this.physicistName = physicistName;
         this.yearOfBirth = yearOfBirth;
         this.almaMater = almaMater;
         this.listOfAwards = listOfAwards;
     }
 
-    public CatalogueItem() {
+    public PhysicistProfile(Physicist physicist, List<Prize> awards){
+        this.physicistName = physicist.getPhysicistName();
+        this.yearOfBirth = physicist.getYearOfBirth();
+        this.almaMater = physicist.getAlmaMater();
+        this.listOfAwards = awards;
+    }
+
+    public PhysicistProfile() {
     }
 
     public String getPhysicistName() {
@@ -44,11 +51,11 @@ public class CatalogueItem {
         this.almaMater = almaMater;
     }
 
-    public List<String> getListOfAwards() {
+    public List<Prize> getListOfAwards() {
         return listOfAwards;
     }
 
-    public void setListOfAwards(List<String> listOfAwards) {
+    public void setListOfAwards(List<Prize> listOfAwards) {
         this.listOfAwards = listOfAwards;
     }
 }

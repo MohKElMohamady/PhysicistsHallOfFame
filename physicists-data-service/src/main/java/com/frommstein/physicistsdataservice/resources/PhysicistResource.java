@@ -5,6 +5,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Arrays;
 import java.util.List;
 
 @RestController
@@ -13,7 +14,7 @@ public class PhysicistResource {
 
     @RequestMapping("/{physicistId}")
     public Physicist getPhysicist(@PathVariable String physicistId){
-        return new Physicist(physicistId, "Max Born", 1885, "Unversity of Göttigen",
-                List.of("999", "444", "555"));
+        return new Physicist(physicistId, "Lev Landau", 1885, "Leningrad State University",
+                Arrays.asList("SP", "NPiPhy", "MPM"));
     }
 }
