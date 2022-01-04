@@ -5,6 +5,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cloud.client.circuitbreaker.EnableCircuitBreaker;
 import org.springframework.cloud.client.loadbalancer.LoadBalanced;
 import org.springframework.cloud.netflix.eureka.EnableEurekaClient;
+import org.springframework.cloud.netflix.hystrix.dashboard.EnableHystrixDashboard;
 import org.springframework.context.annotation.Bean;
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.web.client.RestTemplate;
@@ -564,7 +565,55 @@ import org.springframework.web.client.RestTemplate;
 	 * even if one microservice return meaningful data and does not return a logical response, it will still ignore it
 	 * and execute the fallback method.
 	 *
-	 * So what will we do? We will extract methods out of each api calls and annotate it 
+	 * So what will we do? We will extract methods out of each api calls and annotate it.
+	 * We will also have to add the Hystrix command to each extracted method.
+	 * We will obviously have to create methods with same signature as the extract method and match the name
+	 * provided to the property fallbackMethod in the @HystrixCommand
+	 *
+	 */
+
+	/* Part 19 Refactoring for granular fallback
+	 * As we have seen previously, that writing multiple fallback methods in the same clas will cause an error because
+	 * of how hystrix is implemented.
+	 * Hence, we have to create a new service, autowire to our controller that is responsible for calling the fallback
+	 * mechanism.
+	 * Instead of calling the two microservices inside the controller, we have provided two autowired service
+	 * objects that will call each of the two microservices.
+	 * Inside the service itself we had added the fall back mechanism FOR EACH microservice i.e each method that
+	 * calls the microservice will have an equivalent method that will do the faultback action in case the called microservice
+	 * is not responding or was disconnected by the circuit breaker.
+	 * This is to solve the problem of the proxy pattern and how hystrix manages the cirucit breaker.
+	 */
+
+	/* Configuring Hystrix parameters
+	 *
+	 */
+
+	/* Part 21 Hystrix Dashboard
+	 * Hystrix provides a dashboard that shows us data and statistics on how it is dealing with the microservices
+	 * It provides a web application to show what circuit breakers we have running, what circuit breakers that are currently
+	 * working, what timeout that happened, etc..
+	 * There are two ways to setup Hystrix dashboard:
+	 * 1) Either create a new standalone application that is responsible for representing the Hystrix Dashboard
+	 * 2) Add Hystrix Dashboard to every microservice available
+	 *
+	 * In this course we will add the Hystrix dashboard to our main microservice i.e physicists-catalogue-service
+	 *
+	 * First, we have to add the following dependencies:
+	 *
+	   <dependency>
+			<groupId>org.springframework.cloud</groupId>
+			<artifactId>spring-cloud-starter-netflix-hystrix-dashboard</artifactId>
+			<version>2.2.0.RELEASE</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-actuator</artifactId>
+			<version>2.4.4</version>
+		</dependency>
+
+	 *
 	 *
 	 */
 
@@ -610,9 +659,15 @@ import org.springframework.web.client.RestTemplate;
 	 * 4) Circuit breaker pattern
 	 *
 	 */
+	/*****************************************************LEVEL 2 ENDS HERE************************************/
+
+/* Spring Boot Microservices Level 3 Microservice configuration */
+
+
 @SpringBootApplication
 @EnableEurekaClient
 @EnableCircuitBreaker
+@EnableHystrixDashboard
 public class PhysicistsCatalogueServiceApplication {
 
 	@Bean()

@@ -3,6 +3,8 @@ package com.frommstein.physicistscatalogueservice.resources;
 import com.frommstein.physicistscatalogueservice.models.PhysicistProfile;
 import com.frommstein.physicistscatalogueservice.models.Physicist;
 import com.frommstein.physicistscatalogueservice.models.Prize;
+import com.frommstein.physicistscatalogueservice.services.PhysicistInfo;
+import com.frommstein.physicistscatalogueservice.services.PrizeInfo;
 import com.netflix.hystrix.contrib.javanica.annotation.HystrixCommand;
 import com.netflix.hystrix.contrib.javanica.annotation.HystrixProperty;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,21 +26,33 @@ public class PhysicistProfileResource {
     /*@Autowired
     private WebClient.Builder webClientBuilder;*/
 
+    @Autowired
+    PrizeInfo prizeInfo;
+
+    @Autowired
+    PhysicistInfo physicistInfo;
+
     @RequestMapping("/{physicistId}")
-    @HystrixCommand(fallbackMethod = "getFallbackProfile",
+    /*
+     * The HystrixCommand from the controller method was removed because we have granulated the level of fall back
+     * for each o
+     */
+    /*@HystrixCommand(fallbackMethod = "getFallbackProfile",
     threadPoolKey = "prizeInfoPool",
     threadPoolProperties = {@HystrixProperty(name = "coreSize", value = "20"),
-                            @HystrixProperty(name = "maxQueueSize", value = "10")})
-    public PhysicistProfile getCatalogue(@PathVariable String physicistId){
+                            @HystrixProperty(name = "maxQueueSize", value = "10")})*/
+    public PhysicistProfile getPhysicistProfile(@PathVariable String physicistId){
 
 
         /*return Collections.singletonList(new CatalogueItem("Max Born", 1882, "Universität Göttingen",
                 List.of("Nobel Prize", "Max Planck Medal", "Fellow of the Royal Society")));*/
 
 
-        Physicist foundPhysicist = restTemplate.getForObject(
-                "http://physicists-data-service/physicists/" + physicistId,
-                Physicist.class);
+        /*
+         * Replaced the entire implementation of calling the first microservice with the method called getPhysicist
+         */
+
+        Physicist foundPhysicist = physicistInfo.getPhysicist(physicistId);
 
         for(String prize: foundPhysicist.getListOfWonAwards()){
             System.out.println(prize);
@@ -90,9 +104,7 @@ public class PhysicistProfileResource {
 
             System.out.println(prizeId);
 
-            prizeListForFoundPhysicist.add(restTemplate.getForObject(
-                    "http://prize-info-service/prizes/" + prizeId,
-                    Prize.class));
+            prizeInfo.fetchPrizeAndAddToPrizeListOfPhysicist(prizeListForFoundPhysicist, prizeId);
         }
 
          /*
@@ -112,6 +124,45 @@ public class PhysicistProfileResource {
 
     }
 
+    /*@HystrixCommand(fallbackMethod = "fetchNobelPrize")
+    private void fetchPrizeAndAddToPrizeListOfPhysicist(List<Prize> prizeListForFoundPhysicist, String prizeId) {
+        prizeListForFoundPhysicist.add(restTemplate.getForObject(
+                "http://prize-info-service/prizes/" + prizeId,
+                Prize.class));
+    }
+
+    private void fetchNobelPrize(List<Prize> prizeListForFoundPhysicist, String prizeId){
+        prizeListForFoundPhysicist.add(
+                new Prize("NPiPhy",
+                        "Nobel Prize in Physics",
+                        1902,
+                        1135384,
+                        "The dream of every physicist",
+                        "https://en.wikipedia.org/wiki/Nobel_Prize_in_Physics")
+        );
+    }
+
+    @HystrixCommand(fallbackMethod = "getTheMostFamousPhysicist")
+    private Physicist getPhysicist(String physicistId) {
+        Physicist foundPhysicist = restTemplate.getForObject(
+                "http://physicists-data-service/physicists/" + physicistId,
+                Physicist.class);
+        return foundPhysicist;
+    }
+
+    *//*
+     * We are returning Albert Einstein as the most prominent physicist in the history of mankind as a fallback physicist
+     *//*
+
+    private Physicist getTheMostFamousPhysicist(String physicistId){
+        return new Physicist(
+                "alberteinstein",
+                "Albert Einstein",
+                1879,
+                "ETH Zurich",
+                new ArrayList<>()
+        );
+    }*/
 
     public List<PhysicistProfile> getFallbackProfile(@PathVariable String physicistId){
         return Arrays.asList(new PhysicistProfile("No physicist found, please try later"));
