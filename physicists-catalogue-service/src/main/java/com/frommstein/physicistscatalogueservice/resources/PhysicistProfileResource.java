@@ -31,7 +31,7 @@ public class PhysicistProfileResource {
 
 
         Physicist foundPhysicist = restTemplate.getForObject(
-                "http://localhost:9999/physicists/" + physicistId,
+                "http://physicists-data-service/physicists/" + physicistId,
                 Physicist.class);
 
         for(String prize: foundPhysicist.getListOfWonAwards()){
@@ -85,7 +85,7 @@ public class PhysicistProfileResource {
             System.out.println(prizeId);
 
             prizeListForFoundPhysicist.add(restTemplate.getForObject(
-                    "http://localhost:8888/prizes/" + prizeId,
+                    "http://prize-info-service/prizes/" + prizeId,
                     Prize.class));
         }
 

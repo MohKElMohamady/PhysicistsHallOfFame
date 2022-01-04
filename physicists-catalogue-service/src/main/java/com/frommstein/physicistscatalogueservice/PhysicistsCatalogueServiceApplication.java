@@ -2,6 +2,8 @@ package com.frommstein.physicistscatalogueservice;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.client.loadbalancer.LoadBalanced;
+import org.springframework.cloud.netflix.eureka.EnableEurekaClient;
 import org.springframework.context.annotation.Bean;
 import org.springframework.web.client.RestTemplate;
 /*import org.springframework.web.reactive.function.client.WebClient;*/
@@ -260,11 +262,56 @@ import org.springframework.web.client.RestTemplate;
 	 * instances of them
 	 */
 
+	/* Part 20 Creating Eureka clients
+	 * We have to add Spring Cloud and Eureka client dependency to each of our microservices,
+	 * Our application will be registered as unknown, so we have to give it a name.
+	 * This can be done inside the application.properties of each microservice and annotating each main method in
+	 * every microservice with @EnableEurekaClient
+	 * Thanks to the following stack overflow links that help me get this up and running because of difficulties in
+	 * versioning
+	 * https://stackoverflow.com/questions/51774552/spring-boot-maven-plugin-class-not-found
+	 * https://stackoverflow.com/questions/69061913/beancreationexception-error-creating-bean-with-name-configurationpropertiesbea
+	 */
+
+	/* Part 21 Discovering services through Eureka
+	 * How to consume microservices?
+	 * Consuming it involves another annotation, once we have a rest template to do an API call to do a service
+	 *
+	 * RestTemplate has the ability to be gievn the APPLICATION/SERVICE NAME specified in the application.properties
+	 * of each microservice and it will call the discovery server everytime.
+	 * Hence we will be annotation our rest template with @LoadBalanced which tells RestTemplate to do service discovery
+	 * in a load balanced way.
+	 * What we are essentially saying to the RestTemplate is that do not go to the microservice discovery, rather go to
+	 * the discovery server and ask it for the URL.
+	 * Therefore, we will be replacing all the hardcoded localhost url with the application names!
+	 *
+	 */
+
+	/* Part 22 Doing client side load balancing
+	 *  What happens if the application name of one of these microservices is changed?
+	 * We will be in trouble, we have to standardize the application name.
+	 *
+	 * One of the advantages of microservices is that there is a way to fetch all service names at runtime if we
+	 * don't know ahead-of-time what the service names are
+	 */
+
+	/* Part 23 Recape and Next Steps
+	 * What happens if the discovery server falls down?
+	 * Thanks to caching, the clients will be knowing how to reach other microservices
+	 */
+
+
+	/*****************************************************LEVEL 1 ENDS HERE************************************/
+
+/* Spring Boot Microservices Level 2 */	
+
 
 @SpringBootApplication
+@EnableEurekaClient
 public class PhysicistsCatalogueServiceApplication {
 
 	@Bean()
+	@LoadBalanced
 	public RestTemplate getRestTemplate(){
 		return new RestTemplate();
 	}
