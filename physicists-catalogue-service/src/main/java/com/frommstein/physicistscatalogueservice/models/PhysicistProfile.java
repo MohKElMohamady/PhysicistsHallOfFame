@@ -24,6 +24,10 @@ public class PhysicistProfile {
         this.listOfAwards = awards;
     }
 
+    public PhysicistProfile(String physicistName) {
+        this.physicistName = physicistName;
+    }
+
     public PhysicistProfile() {
     }
 

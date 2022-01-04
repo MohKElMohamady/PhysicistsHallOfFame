@@ -3,6 +3,8 @@ package com.frommstein.physicistscatalogueservice.resources;
 import com.frommstein.physicistscatalogueservice.models.PhysicistProfile;
 import com.frommstein.physicistscatalogueservice.models.Physicist;
 import com.frommstein.physicistscatalogueservice.models.Prize;
+import com.netflix.hystrix.contrib.javanica.annotation.HystrixCommand;
+import com.netflix.hystrix.contrib.javanica.annotation.HystrixProperty;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -23,6 +25,10 @@ public class PhysicistProfileResource {
     private WebClient.Builder webClientBuilder;*/
 
     @RequestMapping("/{physicistId}")
+    @HystrixCommand(fallbackMethod = "getFallbackProfile",
+    threadPoolKey = "prizeInfoPool",
+    threadPoolProperties = {@HystrixProperty(name = "coreSize", value = "20"),
+                            @HystrixProperty(name = "maxQueueSize", value = "10")})
     public PhysicistProfile getCatalogue(@PathVariable String physicistId){
 
 
@@ -104,6 +110,11 @@ public class PhysicistProfileResource {
 
         return profileOfResult;
 
+    }
+
+
+    public List<PhysicistProfile> getFallbackProfile(@PathVariable String physicistId){
+        return Arrays.asList(new PhysicistProfile("No physicist found, please try later"));
     }
 
 }

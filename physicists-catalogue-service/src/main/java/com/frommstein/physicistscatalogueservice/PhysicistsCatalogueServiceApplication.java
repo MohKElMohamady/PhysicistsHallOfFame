@@ -2,9 +2,11 @@ package com.frommstein.physicistscatalogueservice;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.client.circuitbreaker.EnableCircuitBreaker;
 import org.springframework.cloud.client.loadbalancer.LoadBalanced;
 import org.springframework.cloud.netflix.eureka.EnableEurekaClient;
 import org.springframework.context.annotation.Bean;
+import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.web.client.RestTemplate;
 /*import org.springframework.web.reactive.function.client.WebClient;*/
 
@@ -303,17 +305,328 @@ import org.springframework.web.client.RestTemplate;
 
 	/*****************************************************LEVEL 1 ENDS HERE************************************/
 
-/* Spring Boot Microservices Level 2 */	
+/* Spring Boot Microservices Level 2 Fault tolerance and resilience */
 
 
+	/* Part 01 Agenda and prerequisites
+	 *	Understanding challenges with availability
+	 *  Making microservices resilient and fault tolerant
+	 */
+
+	/* Part 02 Fault tolerance vs resilience
+	 *	What is the difference between Fault tolerance and Resilience?
+	 * These two concepts are used interchangeably
+	 *
+	 * Fault tolerance means: given an application, if there is a fault, how will the system be affected? We are looking
+	 * at a single fault.
+	 *
+	 * Resilience: how many faultS can a system tolerate before it is brought down to its knees
+	 */
+
+	/* Part 03 Recap
+	 *
+	 */
+
+	/* Part 04 Calling an external API
+	 *
+	 */
+
+	/* Part 05 What if a microservice goes down?
+	 *	What can we do to make this application resilient?
+	 * First of all, we have to know even if the currently implemented system at this time is resilient or not.
+	 * Bad news is, that it is not because there is no error handling
+	 *
+	 * How to make it resilient?
+	 *
+	 * First we need to understand what can go wrong with microservices?
+	 *
+	 * Scenario 1: a microservice instance goes down.
+	 * So let's say that the prize-info-service goes down, what should we do?
+	 * The physicists catalogue service will also go down
+	 * The solution is to create multiple instances and have them running at different ports
+	 * Thanks to service discovery, we don't have to do alot in order to get this to work
+	 * When a new service is created it is registered to the Eureka server.
+	 * There is a loadbalancing technology called Ribbon that
+	 */
+
+	/* Part 06 What if a microservice is slow?
+	 *
+	 * Scenario 2: A microservice instance is slow
+	 * If a microservice in our application is slow, it is a much bigger problem.
+	 * If -for example- the Prize Info service is slow, it will also affect the physicists-data-service.
+	 * The call from the path physicists-catalogue-service -> physicists-data-service has nothing to do with the other
+	 * path physicists-catalogue-service -> prize-info-service
+	 * But still it is affecting the other path causing it to be slow. How is this happening?
+	 * The answer is: THREADS!
+	 *
+	 */
+
+	/* Part 07 The Problem with Threads
+	 * 	How threads work in a web server?
+	 *  Consider a web server, when the web server receives the request, what happens?
+	 * It has to process the request and returns a response. It spawns a thread to handle it. When the response is retu-
+	 * rned the thread is freed up.
+	 *
+	 * Now what will happen if a request comes up and it is taking time to be executed? i.e the thread is taking a while
+	 * to generate the response. But in the meantime of the execution of the first request, another request comes in
+	 * and spawns another thread.
+	 * So where this is going? Many requests are coming up and they are not executed in time. This ends up exhausting
+	 * all of the resources made available by the server.
+	 * There is a configuration in TomCat server that allows us to configure the maximum number of threads in the pool.
+	 * This the reason behind the slowing down of the web servers. When requests are coming up and the threads are not
+	 * freed up quickly enough.
+	 *
+	 */
+
+	/* Part 08 A possible solution for slow microservices
+	 * Timeout!
+	 * For a request that is taking  long time, we have given this request a thread and as much time as it needs,
+	 * it will return an error.
+	 * Increasing resources is not a solution because we need a solution even with a bigger hardware.
+	 *
+	 * How to set a timeout? We are using the Spring Template to do the API request.
+	 * We can set up timeouts on our Spring RestTemplate, this is not however the ideal way to set up timeout.
+	 *
+	 */
+
+	/* Part 09 Adding timeout to RestTemplate
+	 * 	Any service that is calling an inner or an external service can have a timeout added to it.
+	 * The RestTemplate can be created in such a way that we can configure it to force a timeout after X amount of seconds
+	 * has passed, and it did not receive a request.
+	 * Spring offers us a bean called: HttpComponentsClientHttpRequestFactory() that we can create and call a method on it
+	 * to set the number of milliseconds that we want a request to maximally take.
+	 * this method is called setConnectionTimeOut()
+	 * After that, we will pass this factory object to the constructor of the RestTemplate.
+	 */
+
+	/* Part 10 We haven't solved it yet
+	 * Does this solve the problem?
+	 * When we have a timeout that is set to 3 seconds, what happens if we are receiving a request per second?
+	 * We are back to the same issue. Even though the timeout will eventually solve the issue, the requests coming in
+	 * are too fast. Faster than what the timer can do, to remove the resources from the previous requests.
+	 * The problem can be solved as long as the requests are coming in a frequency less the frequency at which the
+	 * timeout is freeing the resources.
+	 * Hence this partially solves this problem.
+	 */
+
+	/* Part 11 Understanding the circuit breaker pattern
+	 *	First we have to detect that prize-info-service is slow and then rather than blindly send requests,
+	 * I will hold out on sending new requests, give it time recover, keep trying after a while to see if the
+	 * microservice has recovered.
+	 * This is a common pattern in microservices
+	 * This pattern to solve the issue is called CIRCUIT BREAKER PATTERN
+	 * So the steps are:
+	 * 1) Detect that there is something wrong in the traffic
+	 * 2) Take some temporary steps to avoid the situation getting worse, because giving more requests to the microservice
+	 * is already overwhelmed with requests would make the situation worse
+	 * 3) Deactivate temporarily the "problem" component so that it doesn't affect downstream components.
+	 *
+	 * Technically it is not possible to add a circuit breaker to every microservice.
+	 * It is specially important when there is a microservice calling MULITPLE microservices, we don't want one of these
+	 * microservices to be slow which would have been fast.
+	 */
+
+	/* Part 12 Circuit breaker parameters
+	 * We need to have some sort of mechanism to do something when it cannot deliver it what it is asked of.
+	 *
+	 * When should a circuit break?
+	 * There is a limit that is set, when it passes a certain limit it is activated. What are the parameters for
+	 * circuit breakers in microservices?
+	 *
+	 * Now let's say there is a request that was successfully executed and returned a response and there is a second
+	 * request coming in adding and it causes a timeout.
+	 * It is illogical to cause a time out just because only one timeout has happened.
+	 *
+	 * What would be the trigger then?
+	 * We need to know what are the parameters that we need to know to set up to enable
+	 *
+	 * WHEN DOES THE CIRCUIT TRIP?
+	 * 1) Last n requests to consider for the decision : when something fails, it does not immediately go out.
+	 * Rather it looks back in short history and see how many requests were successful and failed i.e how many of these
+	 * are failing?
+	 * 2) Timeout duration
+	 *
+	 * WHEN DOES THE CIRCUIT UN-TRIP?
+	 * 1) How long after a circuit try to try again?
+	 *
+	 *
+	 * Example:
+	 * Last n requests to consider the decision: 5
+	 * How many of thoses hould fail : 3
+	 * Timeout duration: 2s
+	 * How long to wait (sleep window): 10s
+	 *
+	 * If we do multiple requests to the prize-info-microservices
+	 * 0.1s -> 3s -> 0.3s -> 3s -> 4s -> SLEEP WINDOW OF 10s
+	 * 								^
+	 * 								|
+	 * 								|_ When this point is reached, it will stop sending a request
+	 * So what happens after the 4s a successful request comes in that takes 0.4s? We will miss it, which is fine
+	 * because we do not want to keep sending the requests to that microservice because it only make things worse.
+	 * For complete reference: https://github.com/netflix/hystrix/wiki/configuration
+	 *
+	 * These parameters are set according to two criterias: 1)The size of the threadpool 2)The number of requests coming in
+	 */
+
+	/* Part 13 What to do when a circuit breaks?
+	 *	Circuit needs to be tripped. Now what?
+	 *  But there are still requests coming in to get the prizes informations. What to do?
+	 *
+	 * We need to have a FALLBACK mechanism
+	 * What is possible?
+	 * 1) Throw an error. Is it a good idea? No it is not, but it should be the last resort.
+	 * 2) Return a fallback "default" response. Maybe there is a way that the caller can detect that this is a fallback
+	 * response and act accordingly. That is however also not a recommended
+	 * 3) Best response is to save previous responses (cache) and use that when possible.
+	 * We are getting sensible information although it might not be accurate or changed but atleast we get a sensible
+	 * response.
+	 */
+
+	/* Part 14 Circuit breaker benefits
+	 * Why circuit breakers?
+	 * 1) We need to fail fast (a good thing). For something that is about to fail, it is better to detect it early
+	 * and fail it rather than waiting and making it fail later.
+	 * Circuit breaker is doing so, when you realise that something is about to fail, you intervene and apply
+	 * 2) Circuit breaker provide fallback functionality
+	 * 3) Automatic recovery
+	 *
+	 * Hence the circuit breaker pattern can be summarized to these three essential steps that need to be taken
+	 * When to break a circuit | What to do when a circuit breaks | When to resume requests
+	 *
+	 * The framework called Hystrix provides solutions for all of that.
+	 *
+	 * Questions collected:
+	 *
+	 * Q1 How do you identify the available thread pool size?
+	 * A1: It is what can be configured in the servlet container i.e TomCat
+	 *
+	 * Q2: Is there any theory about how to determine circuit breaker parameter values?
+	 * A2: There is a lot of literature that discussing these parameters, but mostly it is trial and error
+	 * Such as performance test to provide expectations on how the load will be after deployment
+	 *
+	 * Q3:
+	 *
+	 * Q4: What if the cached response coming from the circuit breaker fallback is outdated?
+	 * A4: There are certain cases where caching is not appropriate because the data might be sensitive for example a banking
+	 * application , but in some applications like Facebook, It is obviously better to display the cached feed than
+	 * return nothing.
+	 *
+	 *
+	 */
+
+	/* Part 15 What is Hystrix?
+	 * 	Hystrix is an open source library originally created by Netflix
+	 * Hystrix implements circuit breaker pattern so you don't have to
+	 * It works well with Spring Boot
+	 * Note: There is another pattern that is being explored called adaptive fault tolerance
+	 */
+
+	/* Part 16 Adding Hystrix to a Spring Boot app
+	 *	First step is adding the Maven spring-cloud-starter-netflix-hystrix dependency
+	 *  Second step: Go to the main application class in the project that requires a circuit and annotate with
+	 * @EnableCircuitBreaker to the application class, Hystrix will be sitting there waiting to instruct it with the
+	 * parameters for configure the circuit breaker.
+	 * Third Step :We add a circuit breaker @HystrixCommand to methods that need circuit breakers
+	 * Fourth Step: Configure Hystrix behavior
+	 *
+	 * First of, we will not configure @HystrixCommand parameters as we will be leaving the default parameters for
+	 * enabling the circuit breaker.
+	 * We will however give Hystrix the information for a fallback mechanism.
+	 * This is done by passing a string value to the property in the annotation of fallbackMethod
+	 * i.e @HystrixCommand(fallbackMethod = "getFallbackProfile")
+	 * The string value is the name of the method that we will implement in the control to execute in case the microservice
+	 * we are calling inside the method annotation with @HystrixCommand does not reply.
+	 * Note: the method that takes over the Fallback mechanism has to be the same signature of the method annotated
+	 * with @HystrixCommand
+	 *
+	 * So what is Hystrix doing?
+	 * It detects that our method (that calls the microservice) does not get any response and executes the fallback
+	 * method instead.
+	 */
+
+	/* Part 17 How does Hystrix work?
+	 * Who is calling our method?
+	 * How does Hystrix manage this? The answer is pretty simple.
+	 * The answer is proxy.
+	 * So we have our API class i.e PhysicistProfileResource that has a method annotated @HystrixCommand
+	 * So what does Hystrix do? It wraps our API class in a proxy class.
+	 * So when someone asks to get an instance of that our API class, it will not get our API class, rather it will get
+	 * an instance of the Proxy class that contains our instance of API class.
+	 * Hystrix is essentially monitoring the responses with its proxy class instance the responses that our API class
+	 * receives, it examines it and returns it to our API class.
+	 * If something fails however, if it sees if the result is not working, it will redirect the call to the fallback
+	 * method.
+	 */
+
+	/* Part 18 Problem with Hystrix proxy
+	 * Did we solve our problem? Partially.
+	 * Because what we have done is we have annotated the entire method that calls BOTH methods.
+	 * even if one microservice return meaningful data and does not return a logical response, it will still ignore it
+	 * and execute the fallback method.
+	 *
+	 * So what will we do? We will extract methods out of each api calls and annotate it 
+	 *
+	 */
+
+	/* Part 22 The Bulkhead pattern
+	 * There is a third way in which one can deal with outages
+	 * What is the Bulkhead pattern?
+	 * Imagine that requests are piling up on one of the microservices to the extent that this microservice will bring
+	 * another microservice down with it.
+	 * The idea is - similar to the bulkhead in ships- is to create a separate compartment of thread pools
+	 * for microservice x and microservice y.
+	 * Separate minimum and maximum thread pool for x and separate minimum and maximum thread pool for y
+	 * Water is not leaking from the x compartment to y compartment.
+	 *
+	 * This is also can be provided by hystrix by configuring the properties of the @HystrixCommand annotation
+	 * @HystrixCommand( threadPoolKey = "prizeInfoPool",
+	 * threadPoolProperties = {	@HystrixProperty(name = "coreSize", value = "20"),
+	 * @HystrixProperty(name = "maxQueueSize, value = "10"),
+	 * }
+	 * )
+	 * The first property is thread pool key.
+	 * The minute we provide a thread pool key, we are creating a separate space or a separate bulkhead.
+	 * We are creating a new thread pool for certain methods and then we will have multiple methods sharing the
+	 * same thread pool.
+	 * The next step is to configure this bulkhead:
+	 * The second property is threadPoolProperties which contains @HystrixProperties that configures this bulkhead
+	 * We can set the thread pool size with the property named coreSize and we can assign it a value i.e number of
+	 * threads available
+	 * threadPoolProperties = {	@HystrixProperty(name = "coreSize", value = "20") -> here we are setting the numbers
+	 * of the threads which are 20
+	 *
+	 * It can also queue the request which makes it wait for a bit, just sitting and wait not consuming the resources
+	 * and in the same time not return a fallback
+	 * @HystrixProperty(name = "maxQuereSize", value="10") -> is setting the number of requests that has to wait
+	 * until it can access and use the thread
+	 *
+	 */
+
+	/* Part 23 Summary
+	 * What have we done so far?
+	 * 1) Understanding possible some causes for failure in microservices
+	 * 2) Threads, pools and impacts of slow microservices
+	 * 3) Timeouts and its limitations
+	 * 4) Circuit breaker pattern
+	 *
+	 */
 @SpringBootApplication
 @EnableEurekaClient
+@EnableCircuitBreaker
 public class PhysicistsCatalogueServiceApplication {
 
 	@Bean()
 	@LoadBalanced
 	public RestTemplate getRestTemplate(){
-		return new RestTemplate();
+		// Code from level 1
+		/*return new RestTemplate();*/
+
+		HttpComponentsClientHttpRequestFactory clientHttpRequestFactory = new HttpComponentsClientHttpRequestFactory();
+
+		clientHttpRequestFactory.setConnectTimeout(3000);
+
+		return new RestTemplate(clientHttpRequestFactory);
+
 	}
 
 	/*@Bean
